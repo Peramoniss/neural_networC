@@ -6,17 +6,20 @@
 int main()
 {
     FILE *arquivo;
-    arquivo = fopen("test_data.csv", "r");
+    arquivo = fopen("test_data_2.csv", "r");
     dataset *dados = carrega_dados_csv(arquivo, ",", 1000, 1);
+    int neuronios_saida = 2;
 
-    escalona_dados(dados); //altera na própria estrutura
-    //df.head()
-    for (int i = 0; i < 5; i++){
-        for (int j = 0; j < dados->colunas; j++){
-            printf("%.4f ", dados->matriz[i][j]);
-        }
-        printf("\n");
-    }
+    //escalona_dados(dados); //altera na própria estrutura
+    
+    dataframe_head(dados, 4);
+
+    dataset *x, *y;
+    x_y_split(dados, &x, &y, neuronios_saida);
+
+    //dataframe_head(x, 4);
+    //dataframe_head(y, 4);
+
 
 
     //LOOP CARREGANDO DADOS DE OUTRAS LINHAS DO CSV PARA A PRIMEIRA CAMADA. VAI ALTERANDO OS PESOS E OS SALVANDO
@@ -35,10 +38,14 @@ int main()
     printf("Cria rede");
     neural_network *nn;
 
-    nn = cria_rede_neural(dados, 2, camadas_intermediarias); //PRECISA SEPARAR CRIACAO DO TREINAMENTO, E DEPOIS RODAR O
+    nn = cria_rede_neural(x, neuronios_saida, camadas_intermediarias); //PRECISA SEPARAR CRIACAO DO TREINAMENTO, E DEPOIS RODAR O
     //TREINAMENTO N VEZES PARA FUNCIONAR O SISTEMA DE ÉPOCAS. DAÍ TESTA PARA VER SE ESSE É O PROBLEMA
     printf("Criada");
 
+    dataframe_head(y, 5);
+
+    treina_rede_neural(nn, y, 1000); 
+    printf("Treinada");
 
     // for (int i = 0; i < 2; i++){
     //     for(int j = 0; j < rede[i].linhas; j++){
@@ -51,15 +58,17 @@ int main()
     // }
 
     float *teste = dados->matriz[0];
-    for (int i = 0; i < dados->linhas; i++){
+    for (int i = 0; i < dados->linhas; i++){ //dados->linhas
         carrega_camada_entrada(dados->matriz[i], nn->camadas[0].valor, nn->camadas[0].neuronios); //testa a predicao com primeira instancia
         pesos *rede_temp = nn->rede;
-        calculate(&rede_temp, &(nn->camadas), 3); //faz o calculo
+        calculate(&(nn->rede), &(nn->camadas), camadas_intermediarias+2); //faz o calculo
         printf("Teste de previsao: ");
 
-        for (int i = 0; i < nn->camadas[camadas_intermediarias+2-1].neuronios; i++)
-            printf("%f ", nn->camadas[camadas_intermediarias+2-1].valor[i]);
-        printf("\n");
+        for (int j = 0; j < nn->camadas[camadas_intermediarias+2-1].neuronios; j++){
+            printf("Classe %d: %f (%f), ", j, nn->camadas[camadas_intermediarias+2-1].valor[j], y->matriz[i][j]);
+        }
+            //printf("- Esperado: %f ", nn->camadas[camadas_intermediarias+2-1].valor[i]);
+        printf("instancia: %d\n", i);
     }
         
         

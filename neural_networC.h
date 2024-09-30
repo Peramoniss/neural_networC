@@ -15,7 +15,7 @@ typedef struct pesos {
     int linhas;
 } pesos;
 
-typedef struct {
+typedef struct dataset{
     float **matriz; //matriz que conecta os neuronios pelos seus pesos
     int colunas; //mantem forma da matriz - linhas é o número de neuronios de entrada e colunas os de saida
     int linhas;
@@ -32,6 +32,7 @@ typedef struct neural_network
     camada *camadas;
     camada *erros;
     pesos *rede;
+    pesos *delta;
     int output_neurons;
     int hidden_layers;
 } neural_network;
@@ -54,9 +55,11 @@ int carrega_camada_entrada(float *dados, float *camada, int tamanho);
 
 neural_network * cria_rede_neural(dataset *dados, int neuronios_saida, int camadas_intermediarias);
 
-int backpropagation(camada **camadas, camada **erro, pesos **rede, int num_camadas, float momentum, float alpha );
+int backpropagation(camada **camadas, camada **erro, pesos **rede, pesos **delta, int num_camadas, float momentum, float alpha );
 
 int error_factor(camada **camadas, camada **camada_erros, pesos **rede, int num_camadas, float *saida_esperada);
+
+int treina_rede_neural(neural_network *n, dataset *saidas_esperadas, int epocas);
 //######################################################################################################################
 
 //Data treatment
@@ -64,6 +67,10 @@ int error_factor(camada **camadas, camada **camada_erros, pesos **rede, int num_
 dataset *carrega_dados_csv(FILE* arquivo, char *delim, int tam_max_linha, short force_not_null);
 
 int escalona_dados(dataset *dados);
+
+int dataframe_head(dataset *ata, int head);
+
+int x_y_split(dataset *original, dataset **x, dataset **y, int output_neurons);
 //######################################################################################################################
 
 #endif // NEURAL_NETWORC_INCLUDED
