@@ -20,10 +20,6 @@ float** inicia_matriz(int neuronios, int saida)
     for(int i = 0; i < neuronios; i++){
         for(int j = 0; j < saida; j++){
             matriz[i][j] = (float) rand() / RAND_MAX;
-            // float limit = sqrt(6.0 / (neuronios + saida));
-            // matriz[i][j] = ((float)rand() / RAND_MAX) * 2 * limit - limit;
-
-
             //printf("%f ", matriz[i][j]);
         }
         //printf("\n");
@@ -433,12 +429,12 @@ int verifica_pesos(pesos *rede, int tamanho_rede){
     }
 }
 
-int treina_rede_neural(neural_network *nn, dataset *saidas_esperadas, int epocas, float momentum, float alpha){
-    verifica_pesos(nn->delta, nn->hidden_layers+1);
+int treina_rede_neural(neural_network *nn, dataset *saidas_esperadas, int epocas){
+
     int neuronios = nn->dados->colunas;
     int numero_camadas = (nn->hidden_layers) + 2;
     for(int e = 0; e < epocas; e++){
-        if (debug) printf("\n----------Nova epoca %d----------\n", e);
+        if (debug) printf("\n----------Nova epoca----------\n");
         for(int i = 0; i < nn->dados->linhas;i++){ //para cada instância
             carrega_camada_entrada(nn->dados->matriz[i] , nn->camadas[0].valor, neuronios); //envia camada de entrada para receber os dados da primeira instancia
             
@@ -466,10 +462,11 @@ int treina_rede_neural(neural_network *nn, dataset *saidas_esperadas, int epocas
             //     saida_esperada[(nn->dados->colunas) - 1 - j] = nn->dados->matriz[i][j];
             // }
             float *saida_esperada = saidas_esperadas->matriz[i];
+            error_factor(&(nn->camadas), &(nn->erros), &(nn->rede), numero_camadas, saida_esperada);
             // verifica_camadas(nn->camadas);
             // verifica_erro(nn->erros);
             //if( i < 3) verifica_pesos(nn->rede);
-            backpropagation(&(nn->camadas), &(nn->erros), &(nn->rede), &(nn->delta), saida_esperada, numero_camadas, momentum, alpha);
+            backpropagation(&(nn->camadas), &(nn->erros), &(nn->rede), &(nn->delta), numero_camadas, 0.5, 0.8);
             if (debug) printf("\n\n");
         }
     }
@@ -512,68 +509,36 @@ int error_factor(camada **camadas, camada **camada_erros, pesos **rede, int num_
     }
 }
 
-float get_error(camada **camadas, camada **camada_erros, pesos **rede, int camada, int num_camadas, int neuronio, float saida_esperada){
-    if (debug) printf("ERRANDO...:\n");
-    
-    if (num_camadas-1 == camada){ //para camada de saida
-        float saida_neuronio = (*camadas)[camada].valor[neuronio]; //saida do neuronio sendo inspecionado
-        //printf("%.2f - %.2f   ", saida_esperada[i], saida_neuronio);
-        
-        float fator_erro = saida_esperada - saida_neuronio; //diferenca da saida que esperava com a saida que recebeu
-        float erro = saida_neuronio * (1 - saida_neuronio) * fator_erro; //calcula erro
-        (*camada_erros)[camada].valor[neuronio] = erro;
-         if (debug) printf("Saida esperada (%f) - saida recebida (%f) = %f. Saida recebida (%f) * (1 - saida recebida) (%f) * fator erro (%f) = erro (%f)\n"
-        , saida_esperada, saida_neuronio, fator_erro, saida_neuronio, 1-saida_neuronio, fator_erro, erro);
-
-        return erro;
-    }else{ //para camadas intermediarias
-        float fator_erro = 0;
-                for (int j = 0; j < (*camadas)[camada+1].neuronios; j++){ //verifica quais neuronios da camada seguinte se conetam a ele
-                    float erro_seguinte = (*camada_erros)[camada+1].valor[j]; //erro do neuronio da camada seguinte
-                    fator_erro += erro_seguinte * (*rede)[camada].matriz[neuronio][j]; //soma os erros ponderados dos neuronios na camada seguinte
-                }    
-
-                float saida_neuronio = (*camadas)[camada].valor[neuronio]; //saida do neuronio sendo inspecionado
-                float erro = saida_neuronio * (1 - saida_neuronio) * fator_erro; //calcula erro
-
-                (*camada_erros)[camada].valor[neuronio] = erro; //passa erro para camada de erros
-        if (debug) printf("Erro calculado = %f\n", erro);
-
-                return erro;
-    }
-}
-
-
 //REVISAR TODO O BACKPROPAGATION E TODA A INICIALIZAÇÃO DOS DEMAIS ELEMENTOS - PERCORRE TODAS AS DEMAIS ESTRUTURAS E PRINTA PRA VERIFICAR
-int backpropagation(camada **camadas, camada **erro, pesos **peso, pesos **previous_delta, float *saida_esperada, int num_camadas, float momentum, float alpha ) { 
-    if (debug) printf("RETROPROPAGANDO...\n");
-    
-    for (int k = num_camadas - 1; k > 0; k--) { // from output layer back to input layer
-        for (int j = 0; j < (*peso)[k-1].colunas; j++) { // iterate through neurons of the current layer
-            // Calculate the error for the neuron
-            float erro_neuronio = get_error(camadas, erro, peso, k, num_camadas, j, saida_esperada[j]); 
-            
-            // Update each weight connecting from the previous layer to this neuron
-            for (int i = 0; i < (*peso)[k-1].linhas; i++) { 
+int backpropagation(camada **camadas, camada **erro, pesos **peso, pesos **delta, int num_camadas, float momentum, float alpha ){ //alpha = taxa de aprendizagem
+    if (debug) printf("RETROPROPAGANDO...:\n");
+    for(int k = num_camadas-1; k >= 0; k--){ //comeca da camada anterior a saida e vai voltando até o fim 
+        //printf("Moleza %d - %d linhas", k, (*peso)[k].linhas);
+        for(int i = 0; i < (*peso)[k].linhas; i++){ //para cada neuronio da camada de entrada em relacao aos pesos
+            //printf("Barbada %d", (*peso)[k].colunas);
+            for(int j = 0; j < (*peso)[k].colunas; j++){ //verifica cada neuronio da camada de saida em relacao aos pesos
                 if (debug) printf("Neuronio atual (camada %d, neuronio anterior %d, neuronio posterior %d):\n", k, i, j);
+                //calcula novo peso para aquela conexao
+                // printf("CALCULANDO");
+                // printf("peso: %.2f\n", (*peso)[k].matriz[i][j]);
+                // printf("momentum: %.2f\n", momentum);
+                // printf("Saida anterior: %.2f\n", (*camadas)[k].valor[i]);
+                // printf("Erro posterior: %.2f\n", (*erro)[k+1].valor[j]);
+
+                if (debug) printf("Peso (%f) * momentum (%f) + alpha (%f) * saida neuronio anterior (%f) * erro neuronio posterior (%f) = ",
+                (*peso)[k].matriz[i][j], momentum, alpha, (*camadas)[k].valor[i], (*erro)[k+1].valor[j]);
+                (*peso)[k].matriz[i][j] = (*peso)[k].matriz[i][j] * momentum + alpha * (*camadas)[k].valor[i] * (*erro)[k+1].valor[j];//saida da camada anterior * erro da posterior                
+                //(*peso)[k].matriz[i][j] += alpha * (*erro)[k+1].valor[j] * (*camadas)[k].valor[i];
+                if (debug) printf("%f\n", (*peso)[k].matriz[i][j]);
+                // //versão "correta" do gpt
+                // float delta_atual = alpha * (*camadas)[k].valor[i] * (*erro)[k+1].valor[j]; 
+                // (*delta)[k].matriz[i][j] = momentum * (*delta)[k].matriz[i][j] + delta_atual;  // Mantém delta entre iterações
+                // (*peso)[k].matriz[i][j] += (*delta)[k].matriz[i][j];  // Aplica o delta acumulado ao peso
                 
-                // Correct weight update (adjusting from the previous layer to this neuron)
-                if (debug) printf("Peso (%f) + Peso_anterior (%f) * momentum (%f) + alpha (%f) * saida neuronio anterior (%f) * erro neuronio posterior (%f) = ",
-                                  (*peso)[k-1].matriz[i][j], (*previous_delta)[k-1].matriz[i][j], momentum, alpha, (*camadas)[k-1].valor[i], erro_neuronio);
-
-                // Apply weight update using momentum and learning rate
-                //(*peso)[k-1].matriz[i][j] = (*peso)[k-1].matriz[i][j] * momentum + alpha * (*camadas)[k-1].valor[i] * erro_neuronio;
-                //(*peso)[k-1].matriz[i][j] += alpha * (*camadas)[k-1].valor[i] * erro_neuronio;
-
-                // Assuming you store previous weight updates in a matrix 'previous_delta'
-                float weight_update = momentum * (*previous_delta)[k-1].matriz[i][j] + alpha * (*camadas)[k-1].valor[i] * erro_neuronio;
-                (*previous_delta)[k-1].matriz[i][j] = weight_update;  // Store for momentum in the next step
-                (*peso)[k-1].matriz[i][j] += weight_update;  // Apply the weight update
-
-                
-                if (debug) printf("%f\n", (*peso)[k-1].matriz[i][j]);
             }
+            //printf("\n");
         }
+            //printf("\n");
+
     }
-    return 0;
 }

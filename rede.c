@@ -6,7 +6,7 @@
 int main()
 {
     FILE *arquivo;
-    arquivo = fopen("test_data_2.csv", "r");
+    arquivo = fopen("test_data.csv", "r");
     dataset *dados = carrega_dados_csv(arquivo, ",", 1000, 1);
     int neuronios_saida = 2;
 
@@ -42,9 +42,9 @@ int main()
     //TREINAMENTO N VEZES PARA FUNCIONAR O SISTEMA DE ÉPOCAS. DAÍ TESTA PARA VER SE ESSE É O PROBLEMA
     printf("Criada");
 
-    dataframe_head(y, 5);
+    dataframe_head(y, 4);
 
-    treina_rede_neural(nn, y, 1000); 
+    treina_rede_neural(nn, y, 1000, 0.3, 0.001); //0.5 e 0.8 funcionam papra test_data_2;
     printf("Treinada");
 
     // for (int i = 0; i < 2; i++){

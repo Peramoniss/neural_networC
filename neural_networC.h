@@ -55,11 +55,11 @@ int carrega_camada_entrada(float *dados, float *camada, int tamanho);
 
 neural_network * cria_rede_neural(dataset *dados, int neuronios_saida, int camadas_intermediarias);
 
-int backpropagation(camada **camadas, camada **erro, pesos **rede, pesos **delta, int num_camadas, float momentum, float alpha );
+int backpropagation(camada **camadas, camada **erro, pesos **peso, pesos **previous_delta, float *saida_esperada, int num_camadas, float momentum, float alpha );
 
 int error_factor(camada **camadas, camada **camada_erros, pesos **rede, int num_camadas, float *saida_esperada);
 
-int treina_rede_neural(neural_network *n, dataset *saidas_esperadas, int epocas);
+int treina_rede_neural(neural_network *n, dataset *saidas_esperadas, int epocas, float momentum, float alpha);
 //######################################################################################################################
 
 //Data treatment
