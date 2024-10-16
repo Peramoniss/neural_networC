@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Este script reinterpreta o comando nnc e sempre adiciona bamboo.c e MLP.c ao gcc
+
+# Verifica se há pelo menos um argumento
+if [ "$#" -lt 1 ]; then
+    echo "Usage: ./nnc <file(s)> [gcc options]"
+    exit 1
+fi
+
+# Chama o gcc com os arquivos fornecidos pelo usuário e adiciona src/bamboo.c e src/MLP.c
+gcc "$@" src/bamboo.c src/MLP.c
